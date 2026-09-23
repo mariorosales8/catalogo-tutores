@@ -21,32 +21,69 @@
                     </svg>
                 </div>
                 <div class="logo-text">
-                    <h1>Catálogo de Tutores</h1>
-                    <p>Elige un tutor y comienza a aprender</p>
+                    <h1 data-i18n="header.title">Catálogo de Tutores</h1>
+                    <p data-i18n="header.sub">Elige un tutor y comienza a aprender</p>
                 </div>
             </div>
-            <button id="btn-back-header" class="btn-back-header" style="display:none;" type="button">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-                Volver al menú
-            </button>
+            <div class="header-actions">
+                <button id="btn-back-header" class="btn-back-header" style="display:none;" type="button">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                    <span data-i18n="back">Volver al menú</span>
+                </button>
+                <div class="lang-switch" role="group" aria-label="Seleccionar idioma">
+                    <button type="button" class="lang-btn active" data-lang="es" data-i18n="lang.es">ES</button>
+                    <button type="button" class="lang-btn" data-lang="en" data-i18n="lang.en">EN</button>
+                </div>
+            </div>
         </div>
     </header>
 
     <main>
         <!-- Vista menú -->
         <section id="view-menu" class="view active">
-            <h1 class="page-title">Tutores disponibles</h1>
-            <p class="page-sub">Selecciona un tutor para ver sus bloques de aprendizaje y abrir su prompt.</p>
+            <h1 class="page-title" data-i18n="menu.title">Tutores disponibles</h1>
+            <p class="page-sub" data-i18n="menu.sub">Selecciona un tutor para ver sus bloques de aprendizaje y abrir su prompt.</p>
             <div id="tutores-grid" class="tutores-grid"></div>
             <div id="empty-state" class="empty-state" style="display:none;">
-                <h2>Aún no hay tutores</h2>
-                <p>El catálogo está vacío por ahora.</p>
+                <h2 data-i18n="empty.title">Aún no hay tutores</h2>
+                <p data-i18n="empty.sub">El catálogo está vacío por ahora.</p>
             </div>
         </section>
 
         <!-- Vista detalle -->
         <section id="view-detail" class="view"></section>
     </main>
+
+    <!-- Botón de sugerencias -->
+    <button id="btn-suggest" class="btn-suggest" type="button" aria-haspopup="dialog">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/><path d="M21.5 15a9.5 9.5 0 1 1-13.3-13.3 9.5 9.5 0 1 1 13.3 13.3Z"/></svg>
+        <span data-i18n="suggest.label">Enviar sugerencia</span>
+    </button>
+
+    <!-- Modal sugerencias -->
+    <div id="suggest-modal" class="modal-overlay" hidden>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="suggest-modal-title">
+            <h2 id="suggest-modal-title" data-i18n="suggest.title">Sugerencias</h2>
+            <p class="modal-sub" data-i18n="suggest.sub">Ayúdanos a mejorar el catálogo: nuevos tutores, temas, correcciones o lo que creas que podemos mejorar.</p>
+            <form id="suggest-form">
+                <div class="field">
+                    <label for="suggest-tutor" data-i18n="suggest.tutor_label">Tutor (opcional)</label>
+                    <select id="suggest-tutor">
+                        <option value="" data-i18n="suggest.no_tutor">Sin especificar</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="suggest-text" data-i18n="suggest.text_label">Tu sugerencia</label>
+                    <textarea id="suggest-text" rows="5" maxlength="3000" placeholder="" data-i18n-placeholder="suggest.placeholder"></textarea>
+                    <div class="field-hint"><span id="suggest-count">0</span>/3000</div>
+                </div>
+                <div class="admin-actions">
+                    <button type="submit" class="btn primary" id="btn-suggest-send" data-i18n="suggest.submit">Enviar</button>
+                    <button type="button" class="btn secondary" id="btn-suggest-cancel" data-i18n="suggest.cancel">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Toasts -->
     <div class="toast-container" id="toast-container"></div>

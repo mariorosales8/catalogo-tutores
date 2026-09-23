@@ -3,6 +3,8 @@ import os
 import secrets
 import shutil
 import time
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
@@ -10,12 +12,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel
 
-app = FastAPI(title="Catálogo de Tutores", version="1.1.0")
+app = FastAPI(title="Catálogo de Tutores", version="1.2.0")
 
 BASE_DIR = Path(__file__).parent
 SEED_FILE = BASE_DIR / "tutores.json"
 DATA_DIR = BASE_DIR / "data"
 TUTORES_FILE = DATA_DIR / "tutores.json"
+STATS_FILE = DATA_DIR / "stats.json"
+SUGGESTIONS_FILE = DATA_DIR / "sugerencias.json"
 
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 TOKEN_TTL = 12 * 3600  # 12 horas
@@ -48,8 +52,74 @@ def _cargar_tutores() -> list:
     return tutores
 
 
+def _campo(bloque: dict, clave: str, lang: str) -> object:
+    """Devuelve el valor traducido (clave_en) si el idioma lo pide y existe."""
+    if lang == "en":
+        return bloque.get(f"{clave}_en", bloque.get(clave))
+    return bloque.get(clave)
+
+
+def _traducir_tutor(t: dict, lang: str) -> dict:
+    """Copia el tutor aplicando los campos * _en como traducción al inglés.
+    Las claves de salida son las mismas para que el frontend no cambie."""
+    out = dict(t)
+    out["tema"] = _campo(t, "tema", lang) or t.get("tema", "")
+    out["descripcion"] = _campo(t, "descripcion", lang) or t.get("descripcion", "")
+    bloques = []
+    for b in t.get("bloques", []) or []:
+        nb = dict(b)
+        nb["nombre"] = _campo(b, "nombre", lang) or b.get("nombre", "")
+        nb["objetivos"] = _campo(b, "objetivos", lang) or b.get("objetivos", [])
+        nb["prompt"] = _campo(b, "prompt", lang) or b.get("prompt", "")
+        bloques.append(nb)
+    out["bloques"] = bloques
+    return out
+
+
+def _leer_json(ruta: Path, vacio: object) -> object:
+    """Lee un JSON simple del volumen con salvaguardas."""
+    try:
+        if not ruta.exists():
+            return vacio
+        data = json.loads(ruta.read_text(encoding="utf-8"))
+    except Exception:
+        return vacio
+    return data if isinstance(data, dict) else vacio
+
+
+def _guardar_json(ruta: Path, data: dict) -> None:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    tmp = ruta.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    os.replace(tmp, ruta)
+
+
+def _cargar_stats() -> dict:
+    return _leer_json(STATS_FILE, {"tutores": {}})
+
+
+def _guardar_stats(stats: dict) -> None:
+    _guardar_json(STATS_FILE, stats)
+
+
+def _cargar_sugerencias() -> list:
+    data = _leer_json(SUGGESTIONS_FILE, {"sugerencias": []})
+    sug = data.get("sugerencias", []) if isinstance(data, dict) else []
+    return sug if isinstance(sug, list) else []
+
+
+def _guardar_sugerencias(sugerencias: list) -> None:
+    _guardar_json(SUGGESTIONS_FILE, {"sugerencias": sugerencias})
+
+
 class LoginBody(BaseModel):
     password: str
+
+
+class SugerenciaBody(BaseModel):
+    contenido: str
+    tutor_id: str | None = None
+    lang: str = "es"
 
 
 def _revisar_token(authorization: str = Header(default="")) -> str:
@@ -104,27 +174,102 @@ async def admin_guardar(request: Request, _t: str = Depends(_revisar_token)) -> 
 
 
 @app.get("/api/tutores")
-async def listar_tutores():
+async def listar_tutores(lang: str = "es"):
     tutores = _cargar_tutores()
-    # Lista resumida para el menú (sin el detalle de bloques/prompts pesados).
     resumen = []
     for t in tutores:
+        tt = _traducir_tutor(t, lang)
         resumen.append({
-            "id": t.get("id"),
-            "tema": t.get("tema", ""),
-            "descripcion": t.get("descripcion", ""),
-            "color": t.get("color", "#2557a7"),
-            "num_bloques": len(t.get("bloques", [])),
+            "id": tt.get("id"),
+            "tema": tt.get("tema", ""),
+            "descripcion": tt.get("descripcion", ""),
+            "color": tt.get("color", "#2557a7"),
+            "num_bloques": len(tt.get("bloques", [])),
         })
     return {"tutores": resumen}
 
 
 @app.get("/api/tutores/{tutor_id}")
-async def obtener_tutor(tutor_id: str):
+async def obtener_tutor(tutor_id: str, lang: str = "es"):
     for t in _cargar_tutores():
         if t.get("id") == tutor_id:
-            return t
+            return _traducir_tutor(t, lang)
     raise HTTPException(404, "Tutor no encontrado")
+
+
+def _bloque_existe(tutor_id: str, bloque_id: str) -> bool:
+    for t in _cargar_tutores():
+        if t.get("id") != tutor_id:
+            continue
+        for b in t.get("bloques", []) or []:
+            if str(b.get("id")) == str(bloque_id):
+                return True
+    return False
+
+
+@app.post("/api/tutores/{tutor_id}/visita", status_code=204)
+async def registrar_visita(tutor_id: str) -> None:
+    if not any(t.get("id") == tutor_id for t in _cargar_tutores()):
+        raise HTTPException(404, "Tutor no encontrado")
+    stats = _cargar_stats()
+    tutores = stats.setdefault("tutores", {})
+    t = tutores.setdefault(tutor_id, {"visitas": 0, "bloques": {}})
+    t["visitas"] = t.get("visitas", 0) + 1
+    _guardar_stats(stats)
+
+
+@app.post("/api/tutores/{tutor_id}/bloques/{bloque_id}/visita", status_code=204)
+async def registrar_visita_bloque(tutor_id: str, bloque_id: str) -> None:
+    if not _bloque_existe(tutor_id, bloque_id):
+        raise HTTPException(404, "Bloque no encontrado")
+    stats = _cargar_stats()
+    tutores = stats.setdefault("tutores", {})
+    t = tutores.setdefault(tutor_id, {"visitas": 0, "bloques": {}})
+    bloques = t.setdefault("bloques", {})
+    bloques[str(bloque_id)] = bloques.get(str(bloque_id), 0) + 1
+    _guardar_stats(stats)
+
+
+@app.post("/api/sugerencias", status_code=204)
+async def enviar_sugerencia(body: SugerenciaBody) -> None:
+    contenido = (body.contenido or "").strip()
+    if not contenido:
+        raise HTTPException(400, "La sugerencia no puede estar vacía")
+    if len(contenido) > 3000:
+        raise HTTPException(400, "La sugerencia debe tener menos de 3000 caracteres")
+    sugerencias = _cargar_sugerencias()
+    sugerencias.append({
+        "id": uuid.uuid4().hex[:12],
+        "fecha": datetime.now(timezone.utc).isoformat(),
+        "contenido": contenido,
+        "tutor_id": body.tutor_id,
+        "lang": body.lang,
+    })
+    _guardar_sugerencias(sugerencias)
+
+
+@app.get("/admin/api/stats")
+async def admin_estadisticas(_t: str = Depends(_revisar_token)):
+    return _cargar_stats()
+
+
+@app.delete("/admin/api/stats", status_code=204)
+async def admin_reiniciar_stats(_t: str = Depends(_revisar_token)) -> None:
+    _guardar_stats({"tutores": {}})
+
+
+@app.get("/admin/api/sugerencias")
+async def admin_listar_sugerencias(_t: str = Depends(_revisar_token)):
+    return {"sugerencias": _cargar_sugerencias()}
+
+
+@app.delete("/admin/api/sugerencias/{sug_id}", status_code=204)
+async def admin_borrar_sugerencia(sug_id: str, _t: str = Depends(_revisar_token)) -> None:
+    sugerencias = _cargar_sugerencias()
+    restantes = [s for s in sugerencias if s.get("id") != sug_id]
+    if len(restantes) == len(sugerencias):
+        raise HTTPException(404, "Sugerencia no encontrada")
+    _guardar_sugerencias(restantes)
 
 
 @app.get("/health")

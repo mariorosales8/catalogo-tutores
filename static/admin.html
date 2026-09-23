@@ -35,7 +35,7 @@
             outline: none;
             transition: border-color var(--transition), box-shadow var(--transition);
         }
-        .field textarea { min-height: 60vh; resize: vertical; line-height: 1.55; }
+        .field textarea { min-height: 55vh; resize: vertical; line-height: 1.55; }
         .field input[type="password"]:focus,
         .field textarea:focus { border-color: var(--primary); box-shadow: var(--glow); }
         .admin-actions { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
@@ -48,6 +48,146 @@
             font-size: 0.8rem; color: var(--success); font-weight: 600;
         }
         .status-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+
+        /* Pestañas */
+        .admin-tabs {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.25rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.9rem;
+        }
+        .admin-tab-btn {
+            background: var(--surface-2);
+            color: var(--text-dim);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            font-family: var(--font);
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .admin-tab-btn:hover { color: var(--text); background: var(--surface-3); }
+        .admin-tab-btn.active {
+            background: var(--primary-grad);
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 6px 18px -6px rgba(37, 87, 167, 0.6);
+        }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* Estadísticas */
+        .stats-summary {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.4rem;
+        }
+        .stat-chip {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 0.8rem 1.2rem;
+            min-width: 130px;
+        }
+        .stat-chip .stat-num {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff, #c8bfff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .stat-chip .stat-label { font-size: 0.75rem; color: var(--text-faint); }
+        .tutor-stats {
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+        .tutor-stats-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.8rem;
+            padding: 0.9rem 1.1rem;
+            background: var(--surface-2);
+            cursor: pointer;
+        }
+        .tutor-stats-head h3 { font-weight: 600; font-size: 0.95rem; flex: 1; }
+        .tutor-stats-head .tutor-visits {
+            font-weight: 700;
+            color: var(--accent);
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+        .tutor-stats-head svg.chev { transition: transform var(--transition); color: var(--text-faint); }
+        .tutor-stats.open .tutor-stats-head svg.chev { transform: rotate(180deg); }
+        .tutor-stats-body { display: none; padding: 0.6rem 1.1rem 1rem; }
+        .tutor-stats.open .tutor-stats-body { display: block; }
+        .bloque-stat-row {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            padding: 0.45rem 0;
+            border-bottom: 1px dashed var(--border);
+            font-size: 0.88rem;
+        }
+        .bloque-stat-row:last-child { border-bottom: none; }
+        .bloque-stat-id {
+            width: 26px; height: 26px; border-radius: 50%;
+            background: var(--surface-3);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.72rem; font-weight: 700; flex-shrink: 0;
+        }
+        .bloque-stat-name { flex: 1; color: var(--text-dim); }
+        .bloque-stat-count { font-weight: 700; color: var(--text); white-space: nowrap; }
+        .stat-none { color: var(--text-faint); font-size: 0.85rem; padding: 0.8rem 0; }
+
+        /* Sugerencias */
+        .sug-item {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem 1.1rem;
+            margin-bottom: 0.9rem;
+        }
+        .sug-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.5rem;
+        }
+        .sug-meta .sug-date { font-size: 0.75rem; color: var(--text-faint); }
+        .sug-meta .sug-tag {
+            font-size: 0.72rem; color: var(--text-dim);
+            background: var(--surface-3);
+            border: 1px solid var(--border);
+            padding: 0.15rem 0.5rem;
+            border-radius: 999px;
+        }
+        .sug-content { font-size: 0.92rem; margin-bottom: 0.7rem; white-space: pre-wrap; word-break: break-word; }
+        .sug-lang { font-size: 0.7rem; color: var(--text-faint); text-transform: uppercase; }
+        .btn-delete-sug {
+            background: transparent;
+            color: var(--error);
+            border: 1px solid rgba(248, 113, 113, 0.35);
+            padding: 0.4rem 0.8rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+            font-family: var(--font);
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .btn-delete-sug:hover { background: rgba(248, 113, 113, 0.12); }
     </style>
 </head>
 <body>
@@ -87,19 +227,46 @@
 
         <section id="view-editor" class="view">
             <div class="admin-card">
-                <h2>Editar tutores.json <span class="status-badge"><span class="dot"></span>Conectado</span></h2>
+                <h2>Panel de administración <span class="status-badge"><span class="dot"></span>Conectado</span></h2>
                 <p class="sub">Los cambios se guardan directamente y aparecen en el catálogo al instante.</p>
-                <div class="field">
-                    <label for="editor">Contenido del catálogo (JSON)</label>
-                    <textarea id="editor" spellcheck="false"></textarea>
+                <nav class="admin-tabs" role="tablist" aria-label="Secciones del panel">
+                    <button type="button" class="admin-tab-btn active" data-tab="editor" role="tab" aria-selected="true">Editor</button>
+                    <button type="button" class="admin-tab-btn" data-tab="stats" role="tab" aria-selected="false">Estadísticas</button>
+                    <button type="button" class="admin-tab-btn" data-tab="sugerencias" role="tab" aria-selected="false">Sugerencias</button>
+                </nav>
+
+                <div id="tab-editor" class="tab-panel active" role="tabpanel">
+                    <div class="field">
+                        <label for="editor">Contenido del catálogo (JSON)</label>
+                        <textarea id="editor" spellcheck="false"></textarea>
+                    </div>
+                    <p class="hint">Sugerencia: edita un <code>bloque</code> a la vez y guarda; si rompes el JSON, el catálogo anterior sigue sirviendo hasta que guardes uno válido.</p>
                 </div>
-                <div class="admin-actions">
+
+                <div id="tab-stats" class="tab-panel" role="tabpanel">
+                    <h2 style="margin-bottom:0.8rem;">Estadísticas de visitas</h2>
+                    <div class="stats-summary" id="stats-summary"></div>
+                    <div id="stats-list"><p class="stat-none">Cargando…</p></div>
+                    <div class="admin-actions" style="margin-top:1rem;">
+                        <button id="btn-reset-stats" class="btn secondary">Reiniciar contadores</button>
+                    </div>
+                    <p class="hint">Cada vez que alguien abre un tutor se cuenta una visita al tutor; cada vez que usa un bloque (abre o copia su prompt) se cuenta una visita al bloque.</p>
+                </div>
+
+                <div id="tab-sugerencias" class="tab-panel" role="tabpanel">
+                    <div class="admin-actions" style="justify-content:space-between;margin-bottom:0.6rem;">
+                        <h2 style="margin:0;">Sugerencias de los usuarios</h2>
+                        <span id="sug-count" class="status-badge" style="color:var(--text-dim);">0</span>
+                    </div>
+                    <div id="suggestions-list"><p class="stat-none">Cargando…</p></div>
+                </div>
+
+                <div class="admin-actions" style="margin-top:1.4rem;padding-top:1.1rem;border-top:1px solid var(--border);">
                     <button id="btn-save" class="btn primary">Guardar cambios</button>
                     <button id="btn-logout" class="btn secondary">Cerrar sesión</button>
                     <div class="spacer"></div>
                     <a href="/" class="btn secondary">Ver catálogo</a>
                 </div>
-                <p class="hint">Sugerencia: edita un <code>bloque</code> a la vez y guarda; si rompes el JSON, el catálogo anterior sigue sirviendo hasta que guardes uno válido.</p>
             </div>
         </section>
     </main>

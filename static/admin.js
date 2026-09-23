@@ -62,6 +62,58 @@ function showEditor() {
     viewEditor.style.display = 'block';
 }
 
+// --- Pestañas ---
+
+let tutoresMap = null;
+
+async function asegurarMapaTutores() {
+    if (tutoresMap) return tutoresMap;
+    const res = await fetchWithToken(`${API}/admin/api/tutores`);
+    if (!res.ok) return (tutoresMap = {});
+    let data;
+    try {
+        data = await res.json();
+    } catch {
+        return (tutoresMap = {});
+    }
+    const tutores = Array.isArray(data.tutores) ? data.tutores : [];
+    const map = {};
+    for (const t of tutores) {
+        const bloques = {};
+        for (const b of t.bloques || []) {
+            bloques[String(b.id)] = b.nombre || '';
+        }
+        map[String(t.id)] = { tema: t.tema || t.id, bloques };
+    }
+    return (tutoresMap = map);
+}
+
+function nombreTutor(id) {
+    if (tutoresMap && tutoresMap[String(id)]) return tutoresMap[String(id)].tema;
+    return String(id);
+}
+
+function nombreBloque(tutorId, bloqueId) {
+    const t = tutoresMap && tutoresMap[String(tutorId)];
+    if (t && t.bloques[String(bloqueId)] != null) return t.bloques[String(bloqueId)];
+    return String(bloqueId);
+}
+
+document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.admin-tab-btn').forEach(b => {
+            b.classList.toggle('active', b === btn);
+            b.setAttribute('aria-selected', String(b === btn));
+        });
+        document.querySelectorAll('.tab-panel').forEach(p => {
+            p.classList.toggle('active', p.id === `tab-${tab}`);
+        });
+        if (tab === 'stats') cargarEstadisticas();
+        if (tab === 'sugerencias') cargarSugerencias();
+    });
+});
+
 // --- Autenticación ---
 
 loginForm.addEventListener('submit', async (e) => {
@@ -102,18 +154,14 @@ btnLogout.addEventListener('click', () => {
 
 async function abrirEditor() {
     const res = await fetchWithToken(`${API}/admin/api/tutores`);
-    if (res.status === 401 || res.status === 503) {
-        setToken('');
-        showLogin();
-        return;
-    }
-    if (!res.ok) {
+    if (res.status === 401 || res.status === 503 || !res.ok) {
         setToken('');
         showLogin();
         return;
     }
     editor.value = await res.text();
     showEditor();
+    tutoresMap = null;
 }
 
 btnSave.addEventListener('click', async () => {
@@ -145,6 +193,7 @@ btnSave.addEventListener('click', async () => {
             throw new Error(err.detail || 'No se pudo guardar');
         }
         editor.value = JSON.stringify(data, null, 2);
+        tutoresMap = null;
         showToast(`Guardado: ${data.tutores.length} tutores en el catálogo.`, 'success');
     } catch (err) {
         showToast(`Error al guardar: ${err.message}`, 'error', 6000);
@@ -153,6 +202,166 @@ btnSave.addEventListener('click', async () => {
         btnSave.textContent = 'Guardar cambios';
     }
 });
+
+// --- Estadísticas ---
+
+let statsCache = null;
+
+async function cargarEstadisticas() {
+    const summary = document.getElementById('stats-summary');
+    const list = document.getElementById('stats-list');
+    list.innerHTML = '<p class="stat-none">Cargando…</p>';
+    try {
+        [statsCache, tutoresMap] = await Promise.all([
+            fetchWithToken(`${API}/admin/api/stats`).then(async r => {
+                if (!r.ok) throw new Error('error');
+                return r.json();
+            }),
+            asegurarMapaTutores(),
+        ]);
+    } catch (err) {
+        list.innerHTML = '<p class="stat-none">No se pudieron cargar las estadísticas.</p>';
+        return;
+    }
+
+    const tStats = statsCache.tutores || {};
+    const ids = Object.keys(tStats);
+    let totalVisitas = 0;
+    let totalBloques = 0;
+    for (const id of ids) {
+        totalVisitas += tStats[id].visitas || 0;
+        for (const n of Object.values(tStats[id].bloques || {})) totalBloques += n;
+    }
+
+    summary.innerHTML = `
+        <div class="stat-chip"><div class="stat-num">${ids.length}</div><div class="stat-label">Tutores con actividad</div></div>
+        <div class="stat-chip"><div class="stat-num">${totalVisitas}</div><div class="stat-label">Visitas a tutores</div></div>
+        <div class="stat-chip"><div class="stat-num">${totalBloques}</div><div class="stat-label">Uso de bloques</div></div>
+    `;
+
+    if (!ids.length) {
+        list.innerHTML = '<p class="stat-none">Todavía no hay visitas registradas.</p>';
+        return;
+    }
+
+    ids.sort((a, b) => (tStats[b].visitas || 0) - (tStats[a].visitas || 0));
+
+    list.innerHTML = ids.map(id => {
+        const s = tStats[id];
+        const bloques = Object.entries(s.bloques || {});
+        bloques.sort((a, b) => b[1] - a[1]);
+        const rows = bloques.length
+            ? bloques.map(([bid, n]) => `
+                <div class="bloque-stat-row">
+                    <span class="bloque-stat-id">${escapeHtml(bid)}</span>
+                    <span class="bloque-stat-name">${escapeHtml(nombreBloque(id, bid))}</span>
+                    <span class="bloque-stat-count">${escapeHtml(String(n))}</span>
+                </div>`).join('')
+            : '<p class="stat-none">Sin uso de bloques.</p>';
+        return `
+            <div class="tutor-stats">
+                <div class="tutor-stats-head">
+                    <h3>${escapeHtml(nombreTutor(id))}</h3>
+                    <span class="tutor-visits">${s.visitas || 0} visitas</span>
+                    <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="tutor-stats-body">${rows}</div>
+            </div>`;
+    }).join('');
+
+    list.querySelectorAll('.tutor-stats-head').forEach(head => {
+        head.addEventListener('click', () => {
+            const ts = head.closest('.tutor-stats');
+            ts.classList.toggle('open');
+        });
+    });
+}
+
+document.getElementById('btn-reset-stats').addEventListener('click', async () => {
+    if (!confirm('¿Reiniciar todos los contadores de visitas? Esta acción no se puede deshacer.')) return;
+    const btn = document.getElementById('btn-reset-stats');
+    btn.disabled = true;
+    try {
+        const res = await fetchWithToken(`${API}/admin/api/stats`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('error');
+        if (statsCache) statsCache.tutores = {};
+        cargarEstadisticas();
+        showToast('Contadores reiniciados.', 'success');
+    } catch (err) {
+        showToast('No se pudieron reiniciar los contadores.', 'error');
+    } finally {
+        btn.disabled = false;
+    }
+});
+
+// --- Sugerencias ---
+
+let autosLoaded = false;
+
+function formatearFecha(iso) {
+    try {
+        return new Date(iso).toLocaleString();
+    } catch (e) {
+        return iso;
+    }
+}
+
+async function cargarSugerencias() {
+    const list = document.getElementById('suggestions-list');
+    list.innerHTML = '<p class="stat-none">Cargando…</p>';
+    try {
+        tutoresMap = await asegurarMapaTutores();
+        const res = await fetchWithToken(`${API}/admin/api/sugerencias`);
+        if (!res.ok) throw new Error('error');
+        const data = await res.json();
+        renderSugerencias(data.sugerencias || []);
+        autosLoaded = true;
+    } catch (err) {
+        list.innerHTML = '<p class="stat-none">No se pudieron cargar las sugerencias.</p>';
+    }
+}
+
+function renderSugerencias(sugerencias) {
+    const list = document.getElementById('suggestions-list');
+    document.getElementById('sug-count').textContent = `${sugerencias.length} sugerencia${sugerencias.length === 1 ? '' : 's'}`;
+    if (!sugerencias.length) {
+        list.innerHTML = '<p class="stat-none">Todavía no hay sugerencias.</p>';
+        return;
+    }
+    sugerencias.sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
+    list.innerHTML = sugerencias.map(s => {
+        const tutorTag = s.tutor_id ? `<span class="sug-tag">${escapeHtml(nombreTutor(s.tutor_id))}</span>` : '';
+        const langTag = `<span class="sug-tag sug-lang">${escapeHtml((s.lang || 'es').toUpperCase())}</span>`;
+        return `
+            <div class="sug-item" data-id="${escapeHtml(s.id)}">
+                <div class="sug-meta">
+                    <span class="sug-date">${escapeHtml(formatearFecha(s.fecha))}</span>
+                    <div style="display:flex;gap:0.4rem;align-items:center;">${tutorTag}${langTag}</div>
+                </div>
+                <div class="sug-content">${escapeHtml(s.contenido)}</div>
+                <button type="button" class="btn-delete-sug" data-id="${escapeHtml(s.id)}">Eliminar</button>
+            </div>`;
+    }).join('');
+
+    list.querySelectorAll('.btn-delete-sug').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.dataset.id;
+            if (!confirm('¿Eliminar esta sugerencia?')) return;
+            try {
+                const res = await fetchWithToken(`${API}/admin/api/sugerencias/${encodeURIComponent(id)}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('error');
+                const el = list.querySelector(`.sug-item[data-id="${CSS.escape(id)}"]`);
+                if (el) el.remove();
+                const remanentes = list.querySelectorAll('.sug-item').length;
+                document.getElementById('sug-count').textContent = `${remanentes} sugerencia${remanentes === 1 ? '' : 's'}`;
+                if (!remanentes) list.innerHTML = '<p class="stat-none">Todavía no hay sugerencias.</p>';
+                showToast('Sugerencia eliminada.', 'success');
+            } catch (err) {
+                showToast('No se pudo eliminar la sugerencia.', 'error');
+            }
+        });
+    });
+}
 
 // --- Inicio ---
 
