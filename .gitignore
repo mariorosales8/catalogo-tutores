@@ -1,0 +1,6 @@
+# Datos del catálogo en runtime (escribe el panel admin; Railway monta aquí el volumen)
+data/
+
+# Logs y bytecode
+__pycache__/
+*.py[cod]

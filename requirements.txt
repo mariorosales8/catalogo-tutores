@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pypdf
+langchain-core
+langchain-litellm
+pydantic
+python-dotenv
+tiktoken

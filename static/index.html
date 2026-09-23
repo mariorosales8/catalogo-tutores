@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo de Tutores</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%232557a7'/><stop offset='1' stop-color='%233e7bc4'/></linearGradient></defs><rect width='100' height='100' rx='22' fill='url(%23g)'/><text x='50' y='70' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>T</text></svg>">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header>
+        <div class="header-inner">
+            <div class="header-content">
+                <div class="logo-badge">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                        <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+                    </svg>
+                </div>
+                <div class="logo-text">
+                    <h1>Catálogo de Tutores</h1>
+                    <p>Elige un tutor y comienza a aprender</p>
+                </div>
+            </div>
+            <button id="btn-back-header" class="btn-back-header" style="display:none;" type="button">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                Volver al menú
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <!-- Vista menú -->
+        <section id="view-menu" class="view active">
+            <h1 class="page-title">Tutores disponibles</h1>
+            <p class="page-sub">Selecciona un tutor para ver sus bloques de aprendizaje y abrir su prompt.</p>
+            <div id="tutores-grid" class="tutores-grid"></div>
+            <div id="empty-state" class="empty-state" style="display:none;">
+                <h2>Aún no hay tutores</h2>
+                <p>El catálogo está vacío por ahora.</p>
+            </div>
+        </section>
+
+        <!-- Vista detalle -->
+        <section id="view-detail" class="view"></section>
+    </main>
+
+    <!-- Toasts -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

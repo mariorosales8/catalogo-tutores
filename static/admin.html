@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administrar Catálogo de Tutores</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%232557a7'/><text x='50' y='70' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>A</text></svg>">
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .admin-card {
+            background: var(--surface-solid);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.6rem;
+            max-width: 860px;
+            margin: 2rem auto;
+        }
+        .admin-card h2 { font-family: var(--font-display); font-size: 1.25rem; margin-bottom: 0.3rem; }
+        .admin-card p.sub { color: var(--text-dim); font-size: 0.9rem; margin-bottom: 1.2rem; }
+        .field { margin-bottom: 1rem; }
+        .field label { display: block; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.4rem; font-weight: 600; }
+        .field input[type="password"],
+        .field textarea {
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            padding: 0.7rem 0.9rem;
+            outline: none;
+            transition: border-color var(--transition), box-shadow var(--transition);
+        }
+        .field textarea { min-height: 60vh; resize: vertical; line-height: 1.55; }
+        .field input[type="password"]:focus,
+        .field textarea:focus { border-color: var(--primary); box-shadow: var(--glow); }
+        .admin-actions { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
+        .admin-actions .spacer { flex: 1; }
+        .hint { font-size: 0.8rem; color: var(--text-faint); margin-top: 0.7rem; }
+        #view-editor { display: none; }
+        .body-editor { padding-bottom: 4rem; }
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            font-size: 0.8rem; color: var(--success); font-weight: 600;
+        }
+        .status-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-inner">
+            <div class="header-content">
+                <div class="logo-badge">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                </div>
+                <div class="logo-text">
+                    <h1>Administrar Catálogo</h1>
+                    <p>Edita tutores.json desde el navegador</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="body-editor">
+        <section id="view-login" class="view active">
+            <div class="admin-card">
+                <h2>Iniciar sesión</h2>
+                <p class="sub">Solo la persona a cargo del catálogo puede entrar.</p>
+                <form id="login-form">
+                    <div class="field">
+                        <label for="password">Contraseña</label>
+                        <input type="password" id="password" autocomplete="current-password" required>
+                    </div>
+                    <div class="admin-actions">
+                        <button type="submit" class="btn primary" id="btn-login">Entrar</button>
+                        <div class="spacer"></div>
+                        <a href="/" class="btn secondary">Volver al catálogo</a>
+                    </div>
+                    <p class="hint" id="login-error" style="color:var(--error);display:none;"></p>
+                </form>
+            </div>
+        </section>
+
+        <section id="view-editor" class="view">
+            <div class="admin-card">
+                <h2>Editar tutores.json <span class="status-badge"><span class="dot"></span>Conectado</span></h2>
+                <p class="sub">Los cambios se guardan directamente y aparecen en el catálogo al instante.</p>
+                <div class="field">
+                    <label for="editor">Contenido del catálogo (JSON)</label>
+                    <textarea id="editor" spellcheck="false"></textarea>
+                </div>
+                <div class="admin-actions">
+                    <button id="btn-save" class="btn primary">Guardar cambios</button>
+                    <button id="btn-logout" class="btn secondary">Cerrar sesión</button>
+                    <div class="spacer"></div>
+                    <a href="/" class="btn secondary">Ver catálogo</a>
+                </div>
+                <p class="hint">Sugerencia: edita un <code>bloque</code> a la vez y guarda; si rompes el JSON, el catálogo anterior sigue sirviendo hasta que guardes uno válido.</p>
+            </div>
+        </section>
+    </main>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="/static/admin.js"></script>
+</body>
+</html>
