@@ -59,7 +59,7 @@ function showLogin() {
 
 function showEditor() {
     viewLogin.style.display = 'none';
-    viewEditor.style.display = '';
+    viewEditor.style.display = 'block';
 }
 
 // --- Autenticación ---
