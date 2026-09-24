@@ -323,13 +323,13 @@ function renderDetail() {
             ? `<ul>${objetivos.map(o => `<li>${escapeHtml(o)}</li>`).join('')}</ul>`
             : '';
         return `
-            <div class="bloque ${i === 0 ? 'open' : ''}">
+            <div class="bloque">
                 <div class="bloque-header">
                     <div class="bloque-id">${escapeHtml(b.id != null ? b.id : i + 1)}</div>
                     <span class="bloque-title">${escapeHtml(b.nombre || '')}</span>
                     <svg class="bloque-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                 </div>
-                <div class="bloque-body" ${i === 0 ? '' : 'style="display:none;"'}>
+                <div class="bloque-body" style="display:none;">
                     <div class="bloque-objetivos">
                         <h4>${escapeHtml(t('objectives'))}</h4>
                         ${objetivosHtml || `<p style="color:var(--text-dim);font-size:0.9rem;">${escapeHtml(t('no_objectives'))}</p>`}
