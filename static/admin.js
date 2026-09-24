@@ -299,8 +299,17 @@ document.getElementById('btn-reset-stats').addEventListener('click', async () =>
 // --- Gráficas ---
 
 let chartDias = 1;
+let chartVista = 'total';
 let chartInstance = null;
 let chartCargada = false;
+
+const VISTA_COLORS = {
+    total: '#0ea5e9',
+    tutor: '#4a8bd8',
+    bloques_tutor: '#a78bfa',
+    bloque: '#f59e0b',
+};
+const VISTA_REQUIERE_TUTOR = { tutor: true, bloques_tutor: true, bloque: true };
 
 function formatearEtiqueta(iso) {
     const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2})/.exec(iso || '');
@@ -311,20 +320,56 @@ function formatearEtiqueta(iso) {
     return `${dia} ${mes} ${m[4]}:00`;
 }
 
+function tutoresOrdenados() {
+    return Object.keys(tutoresMap || {}).sort((a, b) =>
+        tutoresMap[a].tema.localeCompare(tutoresMap[b].tema));
+}
+
 async function llenarSelectTutores() {
     const select = document.getElementById('chart-tutor');
     const actual = select.value;
     await asegurarMapaTutores();
-    const ids = Object.keys(tutoresMap || {}).sort((a, b) =>
-        tutoresMap[a].tema.localeCompare(tutoresMap[b].tema));
-    select.innerHTML = '<option value="">Todos los tutores</option>';
-    for (const id of ids) {
+    select.innerHTML = '';
+    for (const id of tutoresOrdenados()) {
         const opt = document.createElement('option');
         opt.value = id;
         opt.textContent = tutoresMap[id].tema;
         select.appendChild(opt);
     }
-    if (actual) select.value = actual;
+    if (select.value !== actual && [...select.options].some(o => o.value === actual)) {
+        select.value = actual;
+    }
+}
+
+function llenarSelectBloques() {
+    const select = document.getElementById('chart-bloque');
+    const tutorId = document.getElementById('chart-tutor').value;
+    select.innerHTML = '';
+    const bloques = (tutoresMap[tutorId] && tutoresMap[tutorId].bloques) || {};
+    Object.keys(bloques)
+        .sort((a, b) => Number(a) - Number(b))
+        .forEach(id => {
+            const opt = document.createElement('option');
+            opt.value = id;
+            opt.textContent = `${id} – ${bloques[id] || ''}`.trim();
+            select.appendChild(opt);
+        });
+}
+
+function actualizarVisibilidadCampos() {
+    const requiereTutor = !!VISTA_REQUIERE_TUTOR[chartVista];
+    document.getElementById('field-chart-tutor').style.display = requiereTutor ? '' : 'none';
+    document.getElementById('field-chart-bloque').style.display = chartVista === 'bloque' ? '' : 'none';
+    if (requiereTutor && !document.getElementById('chart-tutor').value) {
+        document.getElementById('chart-tutor').value = tutoresOrdenados()[0] || '';
+    }
+    if (chartVista === 'bloque') {
+        llenarSelectBloquesIfNeeded();
+    }
+}
+
+function llenarSelectBloquesIfNeeded() {
+    if (!document.getElementById('chart-bloque').options.length) llenarSelectBloques();
 }
 
 async function cargarGraficas() {
@@ -333,19 +378,40 @@ async function cargarGraficas() {
     if (!chartCargada) {
         chartCargada = true;
         await llenarSelectTutores();
+        actualizarVisibilidadCampos();
+        llenarSelectBloques();
     }
     if (typeof Chart === 'undefined') {
         fallback.style.display = 'block';
         fallback.textContent = 'No se pudo cargar la librería de gráficas (revisa tu conexión).';
         return;
     }
+    actualizarVisibilidadCampos();
+
+    const tutorSel = document.getElementById('chart-tutor');
+    const bloqueSel = document.getElementById('chart-bloque');
+    const requiereTutor = !!VISTA_REQUIERE_TUTOR[chartVista];
+    const tutorId = requiereTutor ? tutorSel.value : '';
+    const bloqueId = chartVista === 'bloque' ? bloqueSel.value : '';
+    if (requiereTutor && !tutorId) {
+        fallback.style.display = 'block';
+        fallback.textContent = 'No hay tutores registrados.';
+        return;
+    }
+    if (chartVista === 'bloque' && !bloqueId) {
+        fallback.style.display = 'block';
+        fallback.textContent = 'Selecciona un bloque.';
+        return;
+    }
+
     const horas = chartDias * 24;
-    const tutorId = document.getElementById('chart-tutor').value;
     fallback.style.display = 'none';
     let series;
     try {
-        const url = `${API}/admin/api/stats/timeline?horas=${horas}` + (tutorId ? `&tutor_id=${encodeURIComponent(tutorId)}` : '');
-        const res = await fetchWithToken(url);
+        const params = new URLSearchParams({ horas: String(horas) });
+        if (tutorId) params.set('tutor_id', tutorId);
+        if (bloqueId) params.set('bloque_id', bloqueId);
+        const res = await fetchWithToken(`${API}/admin/api/stats/timeline?${params.toString()}`);
         if (!res.ok) throw new Error('error');
         series = await res.json();
     } catch (err) {
@@ -354,7 +420,10 @@ async function cargarGraficas() {
         return;
     }
 
-    const total = (series.total && series.total.length) ? series.total[series.total.length - 1] : 0;
+    const datos = chartVista === 'total' || chartVista === 'tutor'
+        ? (series.visitas_tutor || [])
+        : (series.visitas_bloque || []);
+    const total = datos.length ? datos[datos.length - 1] : 0;
     if (!total) {
         if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
         fallback.style.display = 'block';
@@ -362,38 +431,38 @@ async function cargarGraficas() {
         return;
     }
 
+    const tema = tutorId && tutoresMap[tutorId] ? tutoresMap[tutorId].tema : '';
+    let titulo = '';
+    let leyenda = '';
+    if (chartVista === 'total') { titulo = 'Visitas a todos los tutores (acumulado)'; leyenda = 'Visitas totales'; }
+    else if (chartVista === 'tutor') { titulo = `Visitas a ${tema} (acumulado)`; leyenda = 'Visitas'; }
+    else if (chartVista === 'bloques_tutor') { titulo = `Uso de todos los bloques de ${tema} (acumulado)`; leyenda = 'Uso de bloques'; }
+    else {
+        const nombreBloque = tutoresMap[tutorId] && tutoresMap[tutorId].bloques[bloqueId];
+        titulo = `Visitas al bloque ${bloqueId}${nombreBloque ? ` – ${nombreBloque}` : ''} (acumulado)`;
+        leyenda = 'Visitas al bloque';
+    }
+
     const etiquetas = (series.etiquetas || []).map(formatearEtiqueta);
     if (chartInstance) chartInstance.destroy();
 
+    const color = VISTA_COLORS[chartVista] || '#4a8bd8';
     const gridColor = 'rgba(255,255,255,0.08)';
     chartInstance = new Chart(canvas, {
         type: 'line',
         data: {
             labels: etiquetas,
-            datasets: [
-                {
-                    label: 'Visitas a tutores (acumulado)',
-                    data: series.visitas_tutor || [],
-                    borderColor: '#4a8bd8',
-                    backgroundColor: 'rgba(74,139,216,0.18)',
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: 1,
-                    pointHitRadius: 8,
-                    borderWidth: 2,
-                },
-                {
-                    label: 'Uso de bloques (acumulado)',
-                    data: series.visitas_bloque || [],
-                    borderColor: '#a78bfa',
-                    backgroundColor: 'rgba(167,139,250,0.15)',
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: 1,
-                    pointHitRadius: 8,
-                    borderWidth: 2,
-                },
-            ],
+            datasets: [{
+                label: leyenda,
+                data: datos,
+                borderColor: color,
+                backgroundColor: 'rgba(255,255,255,0.04)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 1,
+                pointHitRadius: 8,
+                borderWidth: 2,
+            }],
         },
         options: {
             responsive: true,
@@ -401,6 +470,7 @@ async function cargarGraficas() {
             interaction: { mode: 'index', intersect: false },
             plugins: {
                 legend: { labels: { color: '#ececf4', boxWidth: 14, boxHeight: 3, font: { size: 12 } } },
+                title: { display: true, text: titulo, color: '#ececf4', font: { size: 14, weight: '600' }, padding: { bottom: 8 } },
                 tooltip: { backgroundColor: '#16161f', borderColor: 'rgba(255,255,255,0.16)', borderWidth: 1, titleColor: '#ececf4', bodyColor: '#9a9ab0' },
             },
             scales: {
@@ -418,17 +488,33 @@ async function cargarGraficas() {
     });
 }
 
-document.querySelectorAll('.range-btn').forEach(btn => {
+document.querySelectorAll('.range-btn[data-days]').forEach(btn => {
     btn.addEventListener('click', () => {
-        document.querySelectorAll('.range-btn').forEach(b => b.classList.toggle('active', b === btn));
+        document.querySelectorAll('.range-btn[data-days]').forEach(b => b.classList.toggle('active', b === btn));
         chartDias = Number(btn.dataset.days);
         cargarGraficas();
     });
 });
-
 document.querySelector('.range-btn[data-days="1"]').classList.add('active');
 
+document.querySelectorAll('.chart-views .range-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.chart-views .range-btn').forEach(b => b.classList.toggle('active', b === btn));
+        chartVista = btn.dataset.vista;
+        cargarGraficas();
+    });
+});
+
 document.getElementById('chart-tutor').addEventListener('change', () => {
+    llenarSelectBloques();
+    if (chartVista === 'bloque') {
+        const sel = document.getElementById('chart-bloque');
+        if (!sel.value && sel.options.length) sel.value = sel.options[0].value;
+    }
+    cargarGraficas();
+});
+
+document.getElementById('chart-bloque').addEventListener('change', () => {
     cargarGraficas();
 });
 

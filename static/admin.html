@@ -190,6 +190,13 @@
         .btn-delete-sug:hover { background: rgba(248, 113, 113, 0.12); }
 
         /* Gráficas */
+        .chart-views {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+        .chart-views .range-btn { padding: 0.5rem 1rem; }
         .chart-controls {
             display: flex;
             align-items: flex-end;
@@ -197,6 +204,11 @@
             gap: 1rem;
             flex-wrap: wrap;
             margin-bottom: 1.2rem;
+        }
+        .chart-selects {
+            display: flex;
+            gap: 0.8rem;
+            flex-wrap: wrap;
         }
         .range-group {
             display: flex;
@@ -319,6 +331,12 @@
 
                 <div id="tab-graficas" class="tab-panel" role="tabpanel">
                     <h2 style="margin-bottom:0.8rem;">Visitas a lo largo del tiempo</h2>
+                    <div class="chart-views" role="group" aria-label="Vista de la gráfica">
+                        <button type="button" class="range-btn active" data-vista="total">Total de tutores</button>
+                        <button type="button" class="range-btn" data-vista="tutor">Por tutor</button>
+                        <button type="button" class="range-btn" data-vista="bloques_tutor">Bloques de un tutor</button>
+                        <button type="button" class="range-btn" data-vista="bloque">Por bloque</button>
+                    </div>
                     <div class="chart-controls">
                         <div class="range-group" role="group" aria-label="Rango de días">
                             <button type="button" class="range-btn" data-days="1">1 día</button>
@@ -328,18 +346,24 @@
                             <button type="button" class="range-btn" data-days="10">10 días</button>
                             <button type="button" class="range-btn" data-days="15">15 días</button>
                         </div>
-                        <div class="chart-tutor-field">
-                            <label for="chart-tutor">Tutor</label>
-                            <select id="chart-tutor">
-                                <option value="">Todos los tutores</option>
-                            </select>
+                        <div class="chart-selects">
+                            <div class="chart-tutor-field" id="field-chart-tutor">
+                                <label for="chart-tutor">Tutor</label>
+                                <select id="chart-tutor">
+                                    <option value="">Todos los tutores</option>
+                                </select>
+                            </div>
+                            <div class="chart-tutor-field" id="field-chart-bloque" style="display:none;">
+                                <label for="chart-bloque">Bloque</label>
+                                <select id="chart-bloque"></select>
+                            </div>
                         </div>
                     </div>
                     <div class="chart-wrap">
                         <canvas id="chart-visitas" height="260" aria-label="Gráfica de visitas por hora" role="img"></canvas>
                         <p id="chart-fallback" class="stat-none" style="display:none;">No hay datos en este rango.</p>
                     </div>
-                    <p class="hint">Curva acumulada por tramos de una hora: cada tramo suma las visitas a tutores y el uso de bloques (abrir o copiar un prompt) de la hora actual más todas las anteriores del rango.</p>
+                    <p class="hint">Curva acumulada por tramos de una hora: cada tramo suma las visitas de la hora actual más todas las anteriores del rango.</p>
                 </div>
 
                 <div id="tab-sugerencias" class="tab-panel" role="tabpanel">

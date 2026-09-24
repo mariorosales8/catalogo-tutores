@@ -282,12 +282,17 @@ async def admin_estadisticas(_t: str = Depends(_revisar_token)):
 
 @app.get("/admin/api/stats/timeline")
 async def admin_timeline(horas: int = 24, tutor_id: str | None = None,
+                         bloque_id: str | None = None,
                          _t: str = Depends(_revisar_token)):
     """Series por tramos de una hora para las gráficas del admin."""
     horas = max(1, min(horas, 24 * 15))
+    if bloque_id and not tutor_id:
+        raise HTTPException(400, "bloque_id requiere tutor_id")
     eventos = _cargar_visitas()
     if tutor_id:
         eventos = [e for e in eventos if e.get("tutor_id") == tutor_id]
+    if bloque_id:
+        eventos = [e for e in eventos if str(e.get("bloque_id")) == bloque_id]
     ahora = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
     buckets: dict[int, dict] = {}
     for e in eventos:
