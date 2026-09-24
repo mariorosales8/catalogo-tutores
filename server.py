@@ -328,6 +328,40 @@ async def admin_timeline(horas: int = 24, tutor_id: str | None = None,
     }
 
 
+@app.get("/admin/api/stats/timeline/bloques")
+async def admin_timeline_bloques(horas: int = 24, tutor_id: str | None = None,
+                                 _t: str = Depends(_revisar_token)):
+    """Series acumuladas por hora, una línea por bloque del tutor."""
+    horas = max(1, min(horas, 24 * 15))
+    if not tutor_id:
+        raise HTTPException(400, "tutor_id es obligatorio")
+    eventos = [e for e in _cargar_visitas()
+               if e.get("tutor_id") == tutor_id and e.get("tipo") == "bloque"]
+    ahora = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    buckets: dict[str, dict[int, int]] = {}
+    for e in eventos:
+        try:
+            ts = datetime.fromisoformat(e.get("fecha", ""))
+        except (TypeError, ValueError):
+            continue
+        ts = ts.replace(minute=0, second=0, microsecond=0)
+        idx = int((ahora - ts).total_seconds() // 3600)
+        if 0 <= idx < horas:
+            bid = str(e.get("bloque_id"))
+            b = buckets.setdefault(bid, {})
+            b[idx] = b.get(idx, 0) + 1
+    etiquetas = []
+    series_por_bloque = {bid: [] for bid in buckets}
+    acumulados = {bid: 0 for bid in buckets}
+    for i in range(horas - 1, -1, -1):
+        h = ahora - timedelta(hours=i)
+        etiquetas.append(h.strftime("%Y-%m-%dT%H:00"))
+        for bid in buckets:
+            acumulados[bid] += buckets[bid].get(i, 0)
+            series_por_bloque[bid].append(acumulados[bid])
+    return {"etiquetas": etiquetas, "bloques": series_por_bloque}
+
+
 @app.delete("/admin/api/stats", status_code=204)
 async def admin_reiniciar_stats(_t: str = Depends(_revisar_token)) -> None:
     _guardar_stats({"tutores": {}})

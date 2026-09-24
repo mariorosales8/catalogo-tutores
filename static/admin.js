@@ -310,6 +310,24 @@ const VISTA_COLORS = {
     bloque: '#f59e0b',
 };
 const VISTA_REQUIERE_TUTOR = { tutor: true, bloques_tutor: true, bloque: true };
+const BLOQUE_PALETTE = ['#4a8bd8', '#a78bfa', '#f59e0b', '#0ea5e9', '#34d399', '#f87171', '#f472b6', '#22d3ee'];
+
+const baseChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    scales: {
+        x: {
+            ticks: { color: '#6b6b85', maxTicksLimit: 12, maxRotation: 60, minRotation: 0 },
+            grid: { color: 'rgba(255,255,255,0.08)' },
+        },
+        y: {
+            beginAtZero: true,
+            ticks: { color: '#6b6b85', precision: 0 },
+            grid: { color: 'rgba(255,255,255,0.08)' },
+        },
+    },
+};
 
 function formatearEtiqueta(iso) {
     const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2})/.exec(iso || '');
@@ -408,10 +426,16 @@ async function cargarGraficas() {
     fallback.style.display = 'none';
     let series;
     try {
-        const params = new URLSearchParams({ horas: String(horas) });
-        if (tutorId) params.set('tutor_id', tutorId);
-        if (bloqueId) params.set('bloque_id', bloqueId);
-        const res = await fetchWithToken(`${API}/admin/api/stats/timeline?${params.toString()}`);
+        let url;
+        if (chartVista === 'bloques_tutor') {
+            url = `${API}/admin/api/stats/timeline/bloques?horas=${horas}&tutor_id=${encodeURIComponent(tutorId)}`;
+        } else {
+            const params = new URLSearchParams({ horas: String(horas) });
+            if (tutorId) params.set('tutor_id', tutorId);
+            if (bloqueId) params.set('bloque_id', bloqueId);
+            url = `${API}/admin/api/stats/timeline?${params.toString()}`;
+        }
+        const res = await fetchWithToken(url);
         if (!res.ok) throw new Error('error');
         series = await res.json();
     } catch (err) {
@@ -420,34 +444,67 @@ async function cargarGraficas() {
         return;
     }
 
+    const etiquetas = (series.etiquetas || []).map(formatearEtiqueta);
+    if (chartInstance) chartInstance.destroy();
+
+    const tema = tutorId && tutoresMap[tutorId] ? tutoresMap[tutorId].tema : '';
+
+    if (chartVista === 'bloques_tutor') {
+        const nombreBloques = (tutoresMap[tutorId] && tutoresMap[tutorId].bloques) || {};
+        const ids = Object.keys(series.bloques || {}).sort((a, b) => Number(a) - Number(b));
+        const total = ids.reduce((acc, id) => {
+            const s = series.bloques[id] || [];
+            return acc + (s.length ? s[s.length - 1] : 0);
+        }, 0);
+        if (!ids.length || !total) {
+            fallback.style.display = 'block';
+            fallback.textContent = 'No hay datos en este rango.';
+            return;
+        }
+        const datasets = ids.map((bid, i) => ({
+            label: nombreBloques[bid] ? `${bid} – ${nombreBloques[bid]}` : `Bloque ${bid}`,
+            data: series.bloques[bid],
+            borderColor: BLOQUE_PALETTE[i % BLOQUE_PALETTE.length],
+            backgroundColor: 'rgba(255,255,255,0.02)',
+            fill: false,
+            tension: 0.3,
+            pointRadius: 0.5,
+            pointHitRadius: 6,
+            borderWidth: 2,
+        }));
+        chartInstance = new Chart(canvas, {
+            type: 'line',
+            data: { labels: etiquetas, datasets },
+            options: { ...baseChartOptions, plugins: {
+                legend: { labels: { color: '#ececf4', boxWidth: 14, boxHeight: 3, font: { size: 12 } } },
+                title: { display: true, text: `Uso de bloques de ${tema} (acumulado)`, color: '#ececf4', font: { size: 14, weight: '600' }, padding: { bottom: 8 } },
+                tooltip: { backgroundColor: '#16161f', borderColor: 'rgba(255,255,255,0.16)', borderWidth: 1, titleColor: '#ececf4', bodyColor: '#9a9ab0' },
+            } },
+        });
+        return;
+    }
+
     const datos = chartVista === 'total' || chartVista === 'tutor'
         ? (series.visitas_tutor || [])
         : (series.visitas_bloque || []);
     const total = datos.length ? datos[datos.length - 1] : 0;
     if (!total) {
-        if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
         fallback.style.display = 'block';
         fallback.textContent = 'No hay datos en este rango.';
         return;
     }
 
-    const tema = tutorId && tutoresMap[tutorId] ? tutoresMap[tutorId].tema : '';
     let titulo = '';
     let leyenda = '';
     if (chartVista === 'total') { titulo = 'Visitas a todos los tutores (acumulado)'; leyenda = 'Visitas totales'; }
     else if (chartVista === 'tutor') { titulo = `Visitas a ${tema} (acumulado)`; leyenda = 'Visitas'; }
-    else if (chartVista === 'bloques_tutor') { titulo = `Uso de todos los bloques de ${tema} (acumulado)`; leyenda = 'Uso de bloques'; }
     else {
         const nombreBloque = tutoresMap[tutorId] && tutoresMap[tutorId].bloques[bloqueId];
         titulo = `Visitas al bloque ${bloqueId}${nombreBloque ? ` – ${nombreBloque}` : ''} (acumulado)`;
         leyenda = 'Visitas al bloque';
     }
 
-    const etiquetas = (series.etiquetas || []).map(formatearEtiqueta);
-    if (chartInstance) chartInstance.destroy();
-
     const color = VISTA_COLORS[chartVista] || '#4a8bd8';
-    const gridColor = 'rgba(255,255,255,0.08)';
     chartInstance = new Chart(canvas, {
         type: 'line',
         data: {
@@ -464,27 +521,11 @@ async function cargarGraficas() {
                 borderWidth: 2,
             }],
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                legend: { labels: { color: '#ececf4', boxWidth: 14, boxHeight: 3, font: { size: 12 } } },
-                title: { display: true, text: titulo, color: '#ececf4', font: { size: 14, weight: '600' }, padding: { bottom: 8 } },
-                tooltip: { backgroundColor: '#16161f', borderColor: 'rgba(255,255,255,0.16)', borderWidth: 1, titleColor: '#ececf4', bodyColor: '#9a9ab0' },
-            },
-            scales: {
-                x: {
-                    ticks: { color: '#6b6b85', maxTicksLimit: 12, maxRotation: 60, minRotation: 0 },
-                    grid: { color: gridColor },
-                },
-                y: {
-                    beginAtZero: true,
-                    ticks: { color: '#6b6b85', precision: 0 },
-                    grid: { color: gridColor },
-                },
-            },
-        },
+        options: { ...baseChartOptions, plugins: {
+            legend: { labels: { color: '#ececf4', boxWidth: 14, boxHeight: 3, font: { size: 12 } } },
+            title: { display: true, text: titulo, color: '#ececf4', font: { size: 14, weight: '600' }, padding: { bottom: 8 } },
+            tooltip: { backgroundColor: '#16161f', borderColor: 'rgba(255,255,255,0.16)', borderWidth: 1, titleColor: '#ececf4', bodyColor: '#9a9ab0' },
+        } },
     });
 }
 
