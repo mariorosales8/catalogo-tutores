@@ -188,6 +188,69 @@
             transition: all var(--transition);
         }
         .btn-delete-sug:hover { background: rgba(248, 113, 113, 0.12); }
+
+        /* Gráficas */
+        .chart-controls {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.2rem;
+        }
+        .range-group {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+        .range-btn {
+            background: var(--surface-2);
+            color: var(--text-dim);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 0.45rem 0.9rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            font-family: var(--font);
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .range-btn:hover { color: var(--text); background: var(--surface-3); }
+        .range-btn.active {
+            background: var(--primary-grad);
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 6px 18px -6px rgba(37, 87, 167, 0.6);
+        }
+        .chart-tutor-field label {
+            display: block;
+            font-size: 0.78rem;
+            color: var(--text-dim);
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+        }
+        .chart-tutor-field select {
+            min-width: 240px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 0.88rem;
+            padding: 0.5rem 0.8rem;
+            outline: none;
+            transition: border-color var(--transition), box-shadow var(--transition);
+        }
+        .chart-tutor-field select:focus { border-color: var(--primary); box-shadow: var(--glow); }
+        .chart-tutor-field select option { background: var(--surface-solid); color: var(--text); }
+        .chart-wrap {
+            position: relative;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 0.8rem 0.5rem 0.4rem;
+            height: 340px;
+        }
     </style>
 </head>
 <body>
@@ -232,6 +295,7 @@
                 <nav class="admin-tabs" role="tablist" aria-label="Secciones del panel">
                     <button type="button" class="admin-tab-btn active" data-tab="editor" role="tab" aria-selected="true">Editor</button>
                     <button type="button" class="admin-tab-btn" data-tab="stats" role="tab" aria-selected="false">Estadísticas</button>
+                    <button type="button" class="admin-tab-btn" data-tab="graficas" role="tab" aria-selected="false">Gráficas</button>
                     <button type="button" class="admin-tab-btn" data-tab="sugerencias" role="tab" aria-selected="false">Sugerencias</button>
                 </nav>
 
@@ -251,6 +315,31 @@
                         <button id="btn-reset-stats" class="btn secondary">Reiniciar contadores</button>
                     </div>
                     <p class="hint">Cada vez que alguien abre un tutor se cuenta una visita al tutor; cada vez que usa un bloque (abre o copia su prompt) se cuenta una visita al bloque.</p>
+                </div>
+
+                <div id="tab-graficas" class="tab-panel" role="tabpanel">
+                    <h2 style="margin-bottom:0.8rem;">Visitas a lo largo del tiempo</h2>
+                    <div class="chart-controls">
+                        <div class="range-group" role="group" aria-label="Rango de días">
+                            <button type="button" class="range-btn" data-days="1">1 día</button>
+                            <button type="button" class="range-btn" data-days="2">2 días</button>
+                            <button type="button" class="range-btn" data-days="3">3 días</button>
+                            <button type="button" class="range-btn" data-days="5">5 días</button>
+                            <button type="button" class="range-btn" data-days="10">10 días</button>
+                            <button type="button" class="range-btn" data-days="15">15 días</button>
+                        </div>
+                        <div class="chart-tutor-field">
+                            <label for="chart-tutor">Tutor</label>
+                            <select id="chart-tutor">
+                                <option value="">Todos los tutores</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="chart-wrap">
+                        <canvas id="chart-visitas" height="260" aria-label="Gráfica de visitas por hora" role="img"></canvas>
+                        <p id="chart-fallback" class="stat-none" style="display:none;">No hay datos en este rango.</p>
+                    </div>
+                    <p class="hint">Agregado por tramo de una hora. Cada tramo suma las visitas a tutores y el uso de bloques (abrir o copiar un prompt).</p>
                 </div>
 
                 <div id="tab-sugerencias" class="tab-panel" role="tabpanel">
@@ -273,6 +362,7 @@
 
     <div class="toast-container" id="toast-container"></div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="/static/admin.js"></script>
 </body>
 </html>

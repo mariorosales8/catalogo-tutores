@@ -110,6 +110,7 @@ document.querySelectorAll('.admin-tab-btn').forEach(btn => {
             p.classList.toggle('active', p.id === `tab-${tab}`);
         });
         if (tab === 'stats') cargarEstadisticas();
+        if (tab === 'graficas') cargarGraficas();
         if (tab === 'sugerencias') cargarSugerencias();
     });
 });
@@ -286,12 +287,149 @@ document.getElementById('btn-reset-stats').addEventListener('click', async () =>
         if (!res.ok) throw new Error('error');
         if (statsCache) statsCache.tutores = {};
         cargarEstadisticas();
+        if (document.getElementById('tab-graficas').classList.contains('active')) cargarGraficas();
         showToast('Contadores reiniciados.', 'success');
     } catch (err) {
         showToast('No se pudieron reiniciar los contadores.', 'error');
     } finally {
         btn.disabled = false;
     }
+});
+
+// --- Gráficas ---
+
+let chartDias = 1;
+let chartInstance = null;
+let chartCargada = false;
+
+function formatearEtiqueta(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2})/.exec(iso || '');
+    if (!m) return iso;
+    const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    const dia = Number(m[3]);
+    const mes = meses[Number(m[2]) - 1];
+    return `${dia} ${mes} ${m[4]}:00`;
+}
+
+async function llenarSelectTutores() {
+    const select = document.getElementById('chart-tutor');
+    const actual = select.value;
+    await asegurarMapaTutores();
+    const ids = Object.keys(tutoresMap || {}).sort((a, b) =>
+        tutoresMap[a].tema.localeCompare(tutoresMap[b].tema));
+    select.innerHTML = '<option value="">Todos los tutores</option>';
+    for (const id of ids) {
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = tutoresMap[id].tema;
+        select.appendChild(opt);
+    }
+    if (actual) select.value = actual;
+}
+
+async function cargarGraficas() {
+    const canvas = document.getElementById('chart-visitas');
+    const fallback = document.getElementById('chart-fallback');
+    if (!chartCargada) {
+        chartCargada = true;
+        await llenarSelectTutores();
+    }
+    if (typeof Chart === 'undefined') {
+        fallback.style.display = 'block';
+        fallback.textContent = 'No se pudo cargar la librería de gráficas (revisa tu conexión).';
+        return;
+    }
+    const horas = chartDias * 24;
+    const tutorId = document.getElementById('chart-tutor').value;
+    fallback.style.display = 'none';
+    let series;
+    try {
+        const url = `${API}/admin/api/stats/timeline?horas=${horas}` + (tutorId ? `&tutor_id=${encodeURIComponent(tutorId)}` : '');
+        const res = await fetchWithToken(url);
+        if (!res.ok) throw new Error('error');
+        series = await res.json();
+    } catch (err) {
+        fallback.style.display = 'block';
+        fallback.textContent = 'No se pudieron cargar los datos de la gráfica.';
+        return;
+    }
+
+    const total = (series.total || []).reduce((a, b) => a + b, 0);
+    if (!total) {
+        if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+        fallback.style.display = 'block';
+        fallback.textContent = 'No hay datos en este rango.';
+        return;
+    }
+
+    const etiquetas = (series.etiquetas || []).map(formatearEtiqueta);
+    if (chartInstance) chartInstance.destroy();
+
+    const gridColor = 'rgba(255,255,255,0.08)';
+    chartInstance = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: etiquetas,
+            datasets: [
+                {
+                    label: 'Visitas a tutores',
+                    data: series.visitas_tutor || [],
+                    borderColor: '#4a8bd8',
+                    backgroundColor: 'rgba(74,139,216,0.18)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 1,
+                    pointHitRadius: 8,
+                    borderWidth: 2,
+                },
+                {
+                    label: 'Uso de bloques',
+                    data: series.visitas_bloque || [],
+                    borderColor: '#a78bfa',
+                    backgroundColor: 'rgba(167,139,250,0.15)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 1,
+                    pointHitRadius: 8,
+                    borderWidth: 2,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { labels: { color: '#ececf4', boxWidth: 14, boxHeight: 3, font: { size: 12 } } },
+                tooltip: { backgroundColor: '#16161f', borderColor: 'rgba(255,255,255,0.16)', borderWidth: 1, titleColor: '#ececf4', bodyColor: '#9a9ab0' },
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#6b6b85', maxTicksLimit: 12, maxRotation: 60, minRotation: 0 },
+                    grid: { color: gridColor },
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: '#6b6b85', precision: 0 },
+                    grid: { color: gridColor },
+                },
+            },
+        },
+    });
+}
+
+document.querySelectorAll('.range-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.range-btn').forEach(b => b.classList.toggle('active', b === btn));
+        chartDias = Number(btn.dataset.days);
+        cargarGraficas();
+    });
+});
+
+document.querySelector('.range-btn[data-days="1"]').classList.add('active');
+
+document.getElementById('chart-tutor').addEventListener('change', () => {
+    cargarGraficas();
 });
 
 // --- Sugerencias ---

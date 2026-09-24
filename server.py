@@ -4,7 +4,7 @@ import secrets
 import shutil
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
@@ -20,6 +20,8 @@ DATA_DIR = BASE_DIR / "data"
 TUTORES_FILE = DATA_DIR / "tutores.json"
 STATS_FILE = DATA_DIR / "stats.json"
 SUGGESTIONS_FILE = DATA_DIR / "sugerencias.json"
+VISITAS_LOG_FILE = DATA_DIR / "visitas_log.json"
+MAX_EVENTOS = 20000
 
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 TOKEN_TTL = 12 * 3600  # 12 horas
@@ -110,6 +112,29 @@ def _cargar_sugerencias() -> list:
 
 def _guardar_sugerencias(sugerencias: list) -> None:
     _guardar_json(SUGGESTIONS_FILE, {"sugerencias": sugerencias})
+
+
+def _cargar_visitas() -> list:
+    data = _leer_json(VISITAS_LOG_FILE, {"eventos": []})
+    eventos = data.get("eventos", []) if isinstance(data, dict) else []
+    return eventos if isinstance(eventos, list) else []
+
+
+def _guardar_visitas(eventos: list) -> None:
+    _guardar_json(VISITAS_LOG_FILE, {"eventos": eventos})
+
+
+def _registrar_evento(tipo: str, tutor_id: str, bloque_id: str | None = None) -> None:
+    eventos = _cargar_visitas()
+    eventos.append({
+        "tipo": tipo,
+        "tutor_id": tutor_id,
+        "bloque_id": bloque_id,
+        "fecha": datetime.now(timezone.utc).isoformat(),
+    })
+    if len(eventos) > MAX_EVENTOS:
+        eventos = eventos[-MAX_EVENTOS:]
+    _guardar_visitas(eventos)
 
 
 class LoginBody(BaseModel):
@@ -216,6 +241,7 @@ async def registrar_visita(tutor_id: str) -> None:
     t = tutores.setdefault(tutor_id, {"visitas": 0, "bloques": {}})
     t["visitas"] = t.get("visitas", 0) + 1
     _guardar_stats(stats)
+    _registrar_evento("tutor", tutor_id)
 
 
 @app.post("/api/tutores/{tutor_id}/bloques/{bloque_id}/visita", status_code=204)
@@ -228,6 +254,7 @@ async def registrar_visita_bloque(tutor_id: str, bloque_id: str) -> None:
     bloques = t.setdefault("bloques", {})
     bloques[str(bloque_id)] = bloques.get(str(bloque_id), 0) + 1
     _guardar_stats(stats)
+    _registrar_evento("bloque", tutor_id, str(bloque_id))
 
 
 @app.post("/api/sugerencias", status_code=204)
@@ -253,9 +280,49 @@ async def admin_estadisticas(_t: str = Depends(_revisar_token)):
     return _cargar_stats()
 
 
+@app.get("/admin/api/stats/timeline")
+async def admin_timeline(horas: int = 24, tutor_id: str | None = None,
+                         _t: str = Depends(_revisar_token)):
+    """Series por tramos de una hora para las gráficas del admin."""
+    horas = max(1, min(horas, 24 * 15))
+    eventos = _cargar_visitas()
+    if tutor_id:
+        eventos = [e for e in eventos if e.get("tutor_id") == tutor_id]
+    ahora = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    buckets: dict[int, dict] = {}
+    for e in eventos:
+        try:
+            ts = datetime.fromisoformat(e.get("fecha", ""))
+        except (TypeError, ValueError):
+            continue
+        ts = ts.replace(minute=0, second=0, microsecond=0)
+        idx = int((ahora - ts).total_seconds() // 3600)
+        if 0 <= idx < horas:
+            b = buckets.setdefault(idx, {"tutor": 0, "bloque": 0})
+            b["tutor" if e.get("tipo") == "tutor" else "bloque"] += 1
+    etiquetas = []
+    visitas_tutor = []
+    visitas_bloque = []
+    total = []
+    for i in range(horas - 1, -1, -1):
+        h = ahora - timedelta(hours=i)
+        etiquetas.append(h.strftime("%Y-%m-%dT%H:00"))
+        b = buckets.get(i, {"tutor": 0, "bloque": 0})
+        visitas_tutor.append(b["tutor"])
+        visitas_bloque.append(b["bloque"])
+        total.append(b["tutor"] + b["bloque"])
+    return {
+        "etiquetas": etiquetas,
+        "visitas_tutor": visitas_tutor,
+        "visitas_bloque": visitas_bloque,
+        "total": total,
+    }
+
+
 @app.delete("/admin/api/stats", status_code=204)
 async def admin_reiniciar_stats(_t: str = Depends(_revisar_token)) -> None:
     _guardar_stats({"tutores": {}})
+    _guardar_visitas([])
 
 
 @app.get("/admin/api/sugerencias")
