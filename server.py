@@ -304,13 +304,17 @@ async def admin_timeline(horas: int = 24, tutor_id: str | None = None,
     visitas_tutor = []
     visitas_bloque = []
     total = []
+    acc_tutor = 0
+    acc_bloque = 0
     for i in range(horas - 1, -1, -1):
         h = ahora - timedelta(hours=i)
         etiquetas.append(h.strftime("%Y-%m-%dT%H:00"))
         b = buckets.get(i, {"tutor": 0, "bloque": 0})
-        visitas_tutor.append(b["tutor"])
-        visitas_bloque.append(b["bloque"])
-        total.append(b["tutor"] + b["bloque"])
+        acc_tutor += b["tutor"]
+        acc_bloque += b["bloque"]
+        visitas_tutor.append(acc_tutor)
+        visitas_bloque.append(acc_bloque)
+        total.append(acc_tutor + acc_bloque)
     return {
         "etiquetas": etiquetas,
         "visitas_tutor": visitas_tutor,

@@ -354,7 +354,7 @@ async function cargarGraficas() {
         return;
     }
 
-    const total = (series.total || []).reduce((a, b) => a + b, 0);
+    const total = (series.total && series.total.length) ? series.total[series.total.length - 1] : 0;
     if (!total) {
         if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
         fallback.style.display = 'block';
@@ -372,7 +372,7 @@ async function cargarGraficas() {
             labels: etiquetas,
             datasets: [
                 {
-                    label: 'Visitas a tutores',
+                    label: 'Visitas a tutores (acumulado)',
                     data: series.visitas_tutor || [],
                     borderColor: '#4a8bd8',
                     backgroundColor: 'rgba(74,139,216,0.18)',
@@ -383,7 +383,7 @@ async function cargarGraficas() {
                     borderWidth: 2,
                 },
                 {
-                    label: 'Uso de bloques',
+                    label: 'Uso de bloques (acumulado)',
                     data: series.visitas_bloque || [],
                     borderColor: '#a78bfa',
                     backgroundColor: 'rgba(167,139,250,0.15)',
