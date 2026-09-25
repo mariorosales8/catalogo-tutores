@@ -1,13 +1,12 @@
 import json
 import os
 import secrets
-import shutil
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel
@@ -17,7 +16,6 @@ app = FastAPI(title="Catálogo de Tutores", version="1.2.0")
 BASE_DIR = Path(__file__).parent
 SEED_FILE = BASE_DIR / "tutores.json"
 DATA_DIR = BASE_DIR / "data"
-TUTORES_FILE = DATA_DIR / "tutores.json"
 STATS_FILE = DATA_DIR / "stats.json"
 SUGGESTIONS_FILE = DATA_DIR / "sugerencias.json"
 VISITAS_LOG_FILE = DATA_DIR / "visitas_log.json"
@@ -28,24 +26,11 @@ TOKEN_TTL = 12 * 3600  # 12 horas
 _tokens: dict[str, float] = {}
 
 
-def _garantizar_datos() -> None:
-    """Si no hay data/tutores.json, lo crea copiando el seed del repositorio
-    (o con un catálogo vacío si falta). El panel y el volumen escriben ahí."""
-    if TUTORES_FILE.exists():
-        return
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    if SEED_FILE.exists():
-        shutil.copy2(SEED_FILE, TUTORES_FILE)
-    else:
-        TUTORES_FILE.write_text('{"tutores": []}', encoding="utf-8")
-
-
 def _cargar_tutores() -> list:
-    """Lee tutores.json en cada petición para que los cambios del dueño
+    """Lee tutores.json del repositorio en cada petición para que los cambios
     aparezcan sin reiniciar el servidor."""
-    _garantizar_datos()
     try:
-        data = json.loads(TUTORES_FILE.read_text(encoding="utf-8"))
+        data = json.loads(SEED_FILE.read_text(encoding="utf-8"))
     except Exception:
         return []
     tutores = data.get("tutores", data) if isinstance(data, dict) else data
@@ -175,27 +160,13 @@ async def admin_login(body: LoginBody):
 
 @app.get("/admin/api/tutores")
 async def admin_obtener(_t: str = Depends(_revisar_token)) -> PlainTextResponse:
-    _garantizar_datos()
-    return PlainTextResponse(
-        TUTORES_FILE.read_text(encoding="utf-8"),
-        media_type="application/json",
-    )
-
-
-@app.post("/admin/api/tutores", status_code=204)
-async def admin_guardar(request: Request, _t: str = Depends(_revisar_token)) -> None:
-    raw = (await request.body()).decode("utf-8")
     try:
-        data = json.loads(raw)
-    except json.JSONDecodeError:
-        raise HTTPException(400, "JSON inválido")
-    if not isinstance(data, dict) or "tutores" not in data:
-        raise HTTPException(400, 'El JSON debe contener la clave "tutores"')
-    if not isinstance(data["tutores"], list):
-        raise HTTPException(400, '"tutores" debe ser una lista')
-    tmp = TUTORES_FILE.with_suffix(".tmp")
-    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-    os.replace(tmp, TUTORES_FILE)
+        return PlainTextResponse(
+            SEED_FILE.read_text(encoding="utf-8"),
+            media_type="application/json",
+        )
+    except Exception:
+        raise HTTPException(500, "No se pudo leer tutores.json")
 
 
 @app.get("/api/tutores")

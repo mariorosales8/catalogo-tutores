@@ -6,8 +6,6 @@ const viewEditor = document.getElementById('view-editor');
 const loginForm = document.getElementById('login-form');
 const passwordInput = document.getElementById('password');
 const loginError = document.getElementById('login-error');
-const editor = document.getElementById('editor');
-const btnSave = document.getElementById('btn-save');
 const btnLogout = document.getElementById('btn-logout');
 
 // --- Helpers ---
@@ -151,7 +149,7 @@ btnLogout.addEventListener('click', () => {
     location.reload();
 });
 
-// --- Editor ---
+// --- Arranque del panel ---
 
 async function abrirEditor() {
     const res = await fetchWithToken(`${API}/admin/api/tutores`);
@@ -160,49 +158,10 @@ async function abrirEditor() {
         showLogin();
         return;
     }
-    editor.value = await res.text();
     showEditor();
     tutoresMap = null;
+    cargarEstadisticas();
 }
-
-btnSave.addEventListener('click', async () => {
-    let data;
-    try {
-        data = JSON.parse(editor.value);
-    } catch {
-        showToast('El JSON no es válido. Corrige el error antes de guardar.', 'error', 7000);
-        return;
-    }
-    if (!data || typeof data !== 'object' || !Array.isArray(data.tutores)) {
-        showToast('El JSON debe tener la forma {"tutores": [...]}', 'error', 7000);
-        return;
-    }
-
-    btnSave.disabled = true;
-    btnSave.textContent = 'Guardando…';
-    try {
-        const res = await fetch(`${API}/admin/api/tutores`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${getToken()}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data, null, 2),
-        });
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(err.detail || 'No se pudo guardar');
-        }
-        editor.value = JSON.stringify(data, null, 2);
-        tutoresMap = null;
-        showToast(`Guardado: ${data.tutores.length} tutores en el catálogo.`, 'success');
-    } catch (err) {
-        showToast(`Error al guardar: ${err.message}`, 'error', 6000);
-    } finally {
-        btnSave.disabled = false;
-        btnSave.textContent = 'Guardar cambios';
-    }
-});
 
 // --- Estadísticas ---
 

@@ -274,7 +274,7 @@
                 </div>
                 <div class="logo-text">
                     <h1>Administrar Catálogo</h1>
-                    <p>Edita tutores.json desde el navegador</p>
+                    <p>El catálogo se carga desde tutores.json</p>
                 </div>
             </div>
         </div>
@@ -303,23 +303,14 @@
         <section id="view-editor" class="view">
             <div class="admin-card">
                 <h2>Panel de administración <span class="status-badge"><span class="dot"></span>Conectado</span></h2>
-                <p class="sub">Los cambios se guardan directamente y aparecen en el catálogo al instante.</p>
+                <p class="sub">El catálogo de tutores se lee directamente de <code>tutores.json</code> del repositorio. Para publicar cambios, edítalo en el repo y despliega de nuevo.</p>
                 <nav class="admin-tabs" role="tablist" aria-label="Secciones del panel">
-                    <button type="button" class="admin-tab-btn active" data-tab="editor" role="tab" aria-selected="true">Editor</button>
-                    <button type="button" class="admin-tab-btn" data-tab="stats" role="tab" aria-selected="false">Estadísticas</button>
+                    <button type="button" class="admin-tab-btn active" data-tab="stats" role="tab" aria-selected="true">Estadísticas</button>
                     <button type="button" class="admin-tab-btn" data-tab="graficas" role="tab" aria-selected="false">Gráficas</button>
                     <button type="button" class="admin-tab-btn" data-tab="sugerencias" role="tab" aria-selected="false">Sugerencias</button>
                 </nav>
 
-                <div id="tab-editor" class="tab-panel active" role="tabpanel">
-                    <div class="field">
-                        <label for="editor">Contenido del catálogo (JSON)</label>
-                        <textarea id="editor" spellcheck="false"></textarea>
-                    </div>
-                    <p class="hint">Sugerencia: edita un <code>bloque</code> a la vez y guarda; si rompes el JSON, el catálogo anterior sigue sirviendo hasta que guardes uno válido.</p>
-                </div>
-
-                <div id="tab-stats" class="tab-panel" role="tabpanel">
+                <div id="tab-stats" class="tab-panel active" role="tabpanel">
                     <h2 style="margin-bottom:0.8rem;">Estadísticas de visitas</h2>
                     <div class="stats-summary" id="stats-summary"></div>
                     <div id="stats-list"><p class="stat-none">Cargando…</p></div>
@@ -375,7 +366,6 @@
                 </div>
 
                 <div class="admin-actions" style="margin-top:1.4rem;padding-top:1.1rem;border-top:1px solid var(--border);">
-                    <button id="btn-save" class="btn primary">Guardar cambios</button>
                     <button id="btn-logout" class="btn secondary">Cerrar sesión</button>
                     <div class="spacer"></div>
                     <a href="/" class="btn secondary">Ver catálogo</a>

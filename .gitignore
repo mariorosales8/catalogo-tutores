@@ -1,4 +1,4 @@
-# Datos del catálogo en runtime (escribe el panel admin; Railway monta aquí el volumen)
+# Datos de runtime (stats, sugerencias y visitas; Railway monta aquí el volumen)
 data/
 
 # Logs y bytecode
