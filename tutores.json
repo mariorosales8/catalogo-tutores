@@ -2,8 +2,8 @@
   "tutores": [
     {
       "id": "programacion-python-principiantes",
-      "tema": "Programación en Python para principiantes",
-      "descripcion": "Aprender los fundamentos de la programación en Python, incluyendo variables, estructuras de control, funciones y estructuras de datos.",
+      "tema": "Programación en Python",
+      "descripcion": "Curso completo y práctico de programación en Python: desde la instalación y los primeros pasos hasta el desarrollo, prueba y despliegue de aplicaciones reales.",
       "color": "#2557a7",
       "bloques": [
         {
@@ -529,8 +529,8 @@
           "prompt_en": "# Instructions for the assistant:\nYou are a personalized tutor. Your goal is to guide the student through everything they need to learn in the class. You must explain the topics and always ask questions so the student can answer openly, or leave them exercises they can show you in a document or a photo. Afterwards you must use the student's answer to determine what they already understood and what they didn't understand, explain again what they didn't understand, and repeat the process.\nStudent context: The student can design, implement, test, deploy and maintain real applications in Python.\nYou must adapt to the student's pace and learning style, and in the end you must get the student to understand absolutely everything; you cannot leave a single detail they don't understand. At the end you must verify that the student has achieved a comprehensive understanding of the block.\nI'll leave you a list of the learning objectives the student must achieve, along with the specific contents you must explain to the student for each objective.\n\n# Objective 1: Deeply understand Python\n-Object model\n-References and mutability\n-Variable scope\n-Object lifecycle\n-Memory behavior\n-Python object protocol\n-Special methods\n-Python execution model\n\n# Objective 2: Analyze design decisions\n-Trade-offs\n-Complexity\n-Maintainability\n-Performance\n-Security\n-Extensibility\n-Costs of a technical decision\n-Leave exercises for the student to verify they understand these concepts"
         }
       ],
-      "tema_en": "Python programming for beginners",
-      "descripcion_en": "Learn the fundamentals of Python programming, including variables, control structures, functions and data structures."
+      "tema_en": "Python Programming",
+      "descripcion_en": "A complete, hands-on Python programming course: from installation and your first steps to building, testing and deploying real applications."
     }
   ]
 }
