@@ -129,7 +129,7 @@ class LoginBody(BaseModel):
 class SugerenciaBody(BaseModel):
     contenido: str
     tutor_id: str | None = None
-    lang: str = "es"
+    lang: str = "en"
 
 
 def _revisar_token(authorization: str = Header(default="")) -> str:
@@ -170,7 +170,7 @@ async def admin_obtener(_t: str = Depends(_revisar_token)) -> PlainTextResponse:
 
 
 @app.get("/api/tutores")
-async def listar_tutores(lang: str = "es"):
+async def listar_tutores(lang: str = "en"):
     tutores = _cargar_tutores()
     resumen = []
     for t in tutores:
@@ -186,7 +186,7 @@ async def listar_tutores(lang: str = "es"):
 
 
 @app.get("/api/tutores/{tutor_id}")
-async def obtener_tutor(tutor_id: str, lang: str = "es"):
+async def obtener_tutor(tutor_id: str, lang: str = "en"):
     for t in _cargar_tutores():
         if t.get("id") == tutor_id:
             return _traducir_tutor(t, lang)

@@ -99,16 +99,20 @@ const I18N = {
     },
 };
 
+const DEFAULT_LANG = 'en';
+
 function detectLang() {
-    const nav = (navigator.language || 'es').toLowerCase();
-    return nav.startsWith('en') ? 'en' : 'es';
+    const nav = (navigator.language || '').toLowerCase();
+    if (nav.startsWith('es')) return 'es';
+    if (nav.startsWith('en')) return 'en';
+    return DEFAULT_LANG;
 }
 
 let lang = localStorage.getItem(LANG_KEY) || detectLang();
-if (lang !== 'es' && lang !== 'en') lang = 'es';
+if (lang !== 'es' && lang !== 'en') lang = DEFAULT_LANG;
 
 function t(key) {
-    const d = I18N[lang] && I18N[lang][key] !== undefined ? I18N[lang] : I18N.es;
+    const d = I18N[lang] && I18N[lang][key] !== undefined ? I18N[lang] : I18N[DEFAULT_LANG];
     return d[key] !== undefined ? d[key] : key;
 }
 
